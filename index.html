@@ -11,7 +11,7 @@
 
 
 <div id="winScreen" style=" display: none;opacity: 0;position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%);z-index: 10;text-align: center;transition: opacity 1s ease-in-out;">
-    <img src="img/victory.png" style="max-width: 300px; display: block; margin: 0 auto;" />
+    <img src="victory.png" style="max-width: 300px; display: block; margin: 0 auto;" />
     <h1 style="color: white; font-family: Arial, sans-serif; margin-top: 20px;">BRAVO HAI DISTRUTTO GLI ASTEROIDI E HAI CREATO SPAZIO PER LA REPUBBLICA</h1>
 </div>
 
@@ -23,7 +23,7 @@
 window.addEventListener("DOMContentLoaded", () => {
     // Wait for user interaction to start music
     const startMusic = () => {
-        backgroundMusic = new Audio("audio/music.mp3");
+        backgroundMusic = new Audio("music.mp3");
         backgroundMusic.loop = true;
         backgroundMusic.volume = 0.5;
         backgroundMusic.play();
@@ -96,7 +96,7 @@ scene.onBeforeRenderObservable.add(() => {
 
 
     // Starfield background
-    const starfield = new BABYLON.Layer("starfield", "img/sfondo.jpg", scene);
+    const starfield = new BABYLON.Layer("starfield", "sfondo.jpg", scene);
     starfield.isBackground = true;
    
     // Load X-Wing model
@@ -151,7 +151,7 @@ BABYLON.SceneLoader.ImportMeshAsync("", "./", "asteroid.glb", scene).then((resul
 
 
 function shootLaser(xwing, scene) {
-    const laserSound = new Audio("audio/fire.mp3");
+    const laserSound = new Audio("fire.mp3");
     laserSound.volume = 0.7;
     laserSound.play();
 
