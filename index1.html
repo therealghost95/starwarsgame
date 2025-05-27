@@ -1,0 +1,224 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Babylon.js X-Wing</title>
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+</head>
+<body>
+<canvas id="renderCanvas" style="width: 100%; height: 100vh;"></canvas>
+
+
+<div id="winScreen" style=" display: none;opacity: 0;position: absolute;top: 50%;left: 50%;transform: translate(-50%, -50%);z-index: 10;text-align: center;transition: opacity 1s ease-in-out;">
+    <img src="img/victory.png" style="max-width: 300px; display: block; margin: 0 auto;" />
+    <h1 style="color: white; font-family: Arial, sans-serif; margin-top: 20px;">BRAVO HAI DISTRUTTO GLI ASTEROIDI E HAI CREATO SPAZIO PER LA REPUBBLICA</h1>
+</div>
+
+
+<script>
+    const activeAsteroids = [];
+    let backgroundMusic;
+
+window.addEventListener("DOMContentLoaded", () => {
+    // Wait for user interaction to start music
+    const startMusic = () => {
+        backgroundMusic = new Audio("audio/music.mp3");
+        backgroundMusic.loop = true;
+        backgroundMusic.volume = 0.5;
+        backgroundMusic.play();
+        window.removeEventListener("click", startMusic);
+        window.removeEventListener("keydown", startMusic);
+    };
+
+    window.addEventListener("click", startMusic);
+    window.addListener("keydown", startMusic);
+});
+const canvas = document.getElementById("renderCanvas");
+const engine = new BABYLON.Engine(canvas, true);
+
+const createScene = async function () {
+    const scene = new BABYLON.Scene(engine);
+    scene.clearColor = new BABYLON.Color3.Black();
+
+    const camera = new BABYLON.ArcRotateCamera("camera", -Math.PI / 2, Math.PI / 2.5, 30, BABYLON.Vector3.Zero(), scene);
+    camera.attachControl(canvas, true);
+
+    light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1, 1, 0), scene);
+
+const inputMap = {};
+scene.actionManager = new BABYLON.ActionManager(scene);
+scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyDownTrigger, evt => {
+    inputMap[evt.sourceEvent.key] = evt.sourceEvent.type === "keydown";
+}));
+scene.actionManager.registerAction(new BABYLON.ExecuteCodeAction(BABYLON.ActionManager.OnKeyUpTrigger, evt => {
+    inputMap[evt.sourceEvent.key] = evt.sourceEvent.type === "keydown";
+}));
+
+
+scene.onBeforeRenderObservable.add(() => {
+    const speed = 0.5;
+    const rotationSpeed = 0.05;
+
+    if (inputMap["d"] || inputMap["ArrowRight"]) {
+        const forward = new BABYLON.Vector3(0, 0, 1);
+        const direction = BABYLON.Vector3.TransformNormal(forward, xwing.getWorldMatrix()).normalize();
+        xwing.position.addInPlace(direction.scale(speed));
+    }
+    if (inputMap["a"] || inputMap["ArrowLeft"]) {
+        const backward = new BABYLON.Vector3(0, 0, -1);
+        const direction = BABYLON.Vector3.TransformNormal(backward, xwing.getWorldMatrix()).normalize();
+        xwing.position.addInPlace(direction.scale(speed));
+    }
+    if (inputMap["w"]) {
+        xwing.position.y += speed; // Move up
+    }
+    if (inputMap["s"]) {
+        xwing.position.y -= speed; // Move down
+    }
+
+// Strafe left
+    if (inputMap["z"]) {
+        const left = new BABYLON.Vector3(-1, 0, 0);
+        const direction = BABYLON.Vector3.TransformNormal(left, xwing.getWorldMatrix()).normalize();
+        xwing.position.addInPlace(direction.scale(speed));
+    }
+
+    // Strafe right
+    if (inputMap["c"]) {
+        const right = new BABYLON.Vector3(1, 0, 0);
+        const direction = BABYLON.Vector3.TransformNormal(right, xwing.getWorldMatrix()).normalize();
+        xwing.position.addInPlace(direction.scale(speed));
+    }
+
+});
+
+
+
+    // Starfield background
+    const starfield = new BABYLON.Layer("starfield", "img/sfondo.jpg", scene);
+    starfield.isBackground = true;
+   
+    // Load X-Wing model
+    const result = await BABYLON.SceneLoader.ImportMeshAsync("", "./", "xwing.glb", scene);
+    const xwing = result.meshes[0];
+    xwing.scaling = new BABYLON.Vector3(2, 2, 2);
+    xwing.position.y = 2;
+
+
+// Load asteroid model and spawn multiple clones
+BABYLON.SceneLoader.ImportMeshAsync("", "./", "asteroid.glb", scene).then((result) => { 
+    const originalAsteroid = result.meshes[0];
+     originalAsteroid.setEnabled(false); // Hide the original
+
+    const asteroidCount = 3;
+     for (let i = 0; i < asteroidCount; i++) {
+     const clone = originalAsteroid.clone("asteroid" + i);
+     clone.setEnabled(true);
+
+    // Random position around the scene
+        clone.position = new BABYLON.Vector3(
+            Math.random() * 100 - 50,
+            Math.random() * 10 + 1,
+            Math.random() * 100 - 50
+        );
+        activeAsteroids.push(clone); 
+
+    // Optional: give each asteroid a slow rotation
+         
+        scene.onBeforeRenderObservable.add(() => {
+        clone.rotation.y += 0.005;
+    });
+
+     }
+});
+
+     // Rotate X-Wing continuously
+        scene.onBeforeRenderObservable.add(() => {
+        xwing.rotation.y += 0.01;
+     });
+
+    // Shoot laser on spacebar press
+         window.addEventListener("keydown", (event) => {
+         if (event.code === "Space") {
+             shootLaser(xwing, scene);
+        }
+     });
+
+     return scene;
+};
+
+
+
+function shootLaser(xwing, scene) {
+    const laserSound = new Audio("audio/fire.mp3");
+    laserSound.volume = 0.7;
+    laserSound.play();
+
+    const laser = BABYLON.MeshBuilder.CreateCylinder("laser", { diameter: 0.1, height: 5 }, scene);
+    const laserMat = new BABYLON.StandardMaterial("laserMat", scene);
+    laserMat.emissiveColor = new BABYLON.Color3(1, 0, 0);
+    laser.material = laserMat;
+
+    const forward = new BABYLON.Vector3(0, 0, 1);
+    let direction = BABYLON.Vector3.TransformNormal(forward, xwing.getWorldMatrix()).normalize();
+
+    const angle = Math.PI / 2;
+    direction = new BABYLON.Vector3(
+        direction.x * Math.cos(angle) - direction.z * Math.sin(angle),
+        direction.y,
+        direction.x * Math.sin(angle) + direction.z * Math.cos(angle)
+    ).normalize();
+
+    const startPosition = xwing.position.add(direction.scale(4));
+    laser.position = startPosition.clone();
+    laser.rotation.z = Math.atan2(direction.x, direction.z);
+
+    const observer = scene.onBeforeRenderObservable.add(() => {
+        laser.position.addInPlace(direction.scale(0.5));
+
+        // Check collision with asteroids
+        for (let i = activeAsteroids.length - 1; i >= 0; i--) {
+            const asteroid = activeAsteroids[i];
+            if (asteroid && BABYLON.Vector3.Distance(laser.position, asteroid.position) < 2) {
+                asteroid.dispose();
+                activeAsteroids.splice(i, 1);              
+        // Play explosion sound
+        const explosionSound = new Audio("audio/explosion.mp3");
+        explosionSound.volume = 0.6;
+        explosionSound.play();
+
+        // Check if all asteroids are destroyed
+        if (activeAsteroids.length === 0) {       
+            const winScreen = document.getElementById("winScreen");
+            winScreen.style.display = "block";
+            setTimeout(() => {
+            winScreen.style.opacity = 1;
+            }, 50); // slight delay to trigger the transition
+
+        engine.stopRenderLoop();
+
+}
+
+                laser.dispose();
+                scene.onBeforeRenderObservable.remove(observer);
+                return;
+            }
+        }
+
+        if (BABYLON.Vector3.Distance(laser.position, xwing.position) > 100) {
+            laser.dispose();
+            scene.onBeforeRenderObservable.remove(observer);
+        }
+    });
+}
+
+
+createScene().then(scene => {
+    engine.runRenderLoop(() => scene.render());
+});
+window.addEventListener("resize", () => engine.resize());
+</script>
+</body>
+</html>
+   
